@@ -8,6 +8,7 @@ Unlike traditional shells that are passive, Shyell is active. It monitors your s
 
 ### Key Differentiators:
 - **Active Dashboard Prompt**: Real-time CPU and Memory status integrated directly into your prompt.
+- **Status-Aware Symbol**: A modern `❯` symbol that turns **green** on success and **red** on failure.
 - **Semantic Context**: Automatically detects if you are in a Rust, Node.js, or Git project and shows relevant stats (e.g., `target/` size).
 - **Pre-flight Guardrails**: Warns you if system resources (CPU/RAM) are too high before you execute a command.
 - **Flight Recorder (Benchmarking)**: Automatically stores benchmarking results in a JSON database and alerts you to performance regressions.

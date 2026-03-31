@@ -54,10 +54,17 @@ fn get_prompt(state: &mut ShellState) -> String {
         cpu_usage, mem_pct
     ));
 
+    // Status-aware symbol
+    let symbol = if state.last_exit_status == Some(0) {
+        "\x1b[1;32m❯\x1b[0m" // Green success
+    } else {
+        "\x1b[1;31m❯\x1b[0m" // Red failure
+    };
+
     // Main prompt
     prompt.push_str(&format!(
-        "\x1b[1;32m{}\x1b[0m:\x1b[1;34m{}\x1b[0m\x1b[1;37m$ \x1b[0m",
-        user, cwd_str
+        "\x1b[1;32m{}\x1b[0m:\x1b[1;34m{}\x1b[0m {} ",
+        user, cwd_str, symbol
     ));
 
     prompt

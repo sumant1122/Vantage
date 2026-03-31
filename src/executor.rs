@@ -54,6 +54,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
     let start_time = if is_bench { Some(Instant::now()) } else { None };
 
     if cmds.len() == 1 && state.execute_builtins(&cmds[0]) {
+        state.last_exit_status = Some(0); // Built-ins handled so far return success
         if let Some(start) = start_time {
             let elapsed = start.elapsed();
             println!("\x1b[1;35mBench: Built-in command took {:?}\x1b[0m", elapsed);
@@ -69,6 +70,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
     for (i, cmd_exec) in cmds.iter().enumerate() {
         if cmd_exec.args.is_empty() {
             eprintln!("shyell: parse error: empty command in pipeline");
+            state.last_exit_status = Some(1);
             return;
         }
 
@@ -77,6 +79,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
                 Ok(f) => Stdio::from(f),
                 Err(e) => {
                     eprintln!("shyell: {}: {}", in_file, e);
+                    state.last_exit_status = Some(1);
                     return;
                 }
             }
@@ -96,6 +99,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
                 Ok(f) => Stdio::from(f),
                 Err(e) => {
                     eprintln!("shyell: {}: {}", out_file, e);
+                    state.last_exit_status = Some(1);
                     return;
                 }
             }
@@ -122,6 +126,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
             }
             Err(e) => {
                 eprintln!("shyell: {}: {}", command, e);
+                state.last_exit_status = Some(1);
                 break;
             }
         }
@@ -134,6 +139,8 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
             Err(e) => eprintln!("shyell: error waiting for {}: {}", name, e),
         }
     }
+
+    state.last_exit_status = last_status.and_then(|s| s.code()).or(Some(0));
 
     if let Some(start) = start_time {
         let elapsed = start.elapsed();

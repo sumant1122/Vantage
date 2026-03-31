@@ -18,6 +18,7 @@ pub struct ShellState {
     pub history_path: PathBuf,
     pub bench_history_path: PathBuf,
     pub bench_results: Vec<BenchmarkResult>,
+    pub last_exit_status: Option<i32>,
 }
 
 impl ShellState {
@@ -38,6 +39,7 @@ impl ShellState {
             history_path,
             bench_history_path,
             bench_results,
+            last_exit_status: Some(0), // Default to success
         }
     }
 
