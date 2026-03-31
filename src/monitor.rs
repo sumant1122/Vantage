@@ -30,26 +30,55 @@ impl Monitor {
         // Check for Rust project
         if cwd.join("Cargo.toml").exists() {
             let target_size = Self::get_dir_size(&cwd.join("target"));
-            return Some(format!("🦀 Rust Project | target: {}", Self::format_size(target_size)));
+            let git_info = Self::get_git_info(&cwd);
+            return Some(format!("🦀 Rust Project | target: {}{}", 
+                Self::format_size(target_size),
+                git_info.map(|s| format!(" | {}", s)).unwrap_or_default()
+            ));
         }
 
         // Check for Node.js project
         if cwd.join("package.json").exists() {
             let nm_size = Self::get_dir_size(&cwd.join("node_modules"));
-            return Some(format!("📦 Node.js Project | node_modules: {}", Self::format_size(nm_size)));
+            let git_info = Self::get_git_info(&cwd);
+            return Some(format!("📦 Node.js Project | node_modules: {}{}", 
+                Self::format_size(nm_size),
+                git_info.map(|s| format!(" | {}", s)).unwrap_or_default()
+            ));
         }
 
         // Check for Python project
         if cwd.join("requirements.txt").exists() || cwd.join("pyproject.toml").exists() {
-            return Some("🐍 Python Project".to_string());
+            let git_info = Self::get_git_info(&cwd);
+            return Some(format!("🐍 Python Project{}", 
+                git_info.map(|s| format!(" | {}", s)).unwrap_or_default()
+            ));
         }
 
-        // Check for Git
-        if cwd.join(".git").exists() {
-            return Some("📜 Git Repository".to_string());
+        // Check for Git (Generic)
+        if let Some(git_info) = Self::get_git_info(&cwd) {
+            return Some(format!("📜 {}", git_info));
         }
 
         None
+    }
+
+    fn get_git_info(path: &Path) -> Option<String> {
+        let dot_git = path.join(".git");
+        if !dot_git.exists() { return None; }
+
+        // Try to read HEAD to get branch name
+        let head_path = dot_git.join("HEAD");
+        if let Ok(head_content) = std::fs::read_to_string(head_path) {
+            if head_content.starts_with("ref: refs/heads/") {
+                let branch = head_content.trim_start_matches("ref: refs/heads/").trim();
+                return Some(format!(" {}", branch));
+            } else if !head_content.trim().is_empty() {
+                // Detached HEAD (shows first 7 chars of hash)
+                return Some(format!(" ({:.7})", head_content.trim()));
+            }
+        }
+        Some("📜 Git Repo".to_string())
     }
 
     fn get_dir_size(path: &Path) -> u64 {
