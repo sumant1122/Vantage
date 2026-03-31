@@ -5,9 +5,171 @@ use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::{PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::time::Instant;
-use sysinfo::{CpuRefreshKind, ProcessRefreshKind, System, RefreshKind, MemoryRefreshKind};
+use sysinfo::{CpuRefreshKind, ProcessRefreshKind, System, RefreshKind, MemoryRefreshKind, Disks};
+
+struct ShellState {
+    prev_dir: Option<PathBuf>,
+    sys: System,
+    history_path: PathBuf,
+}
+
+impl ShellState {
+    fn new() -> Self {
+        let history_path = dirs::home_dir()
+            .map(|mut p| { p.push(".shyell_history"); p })
+            .unwrap_or_else(|| PathBuf::from(".shyell_history"));
+
+        Self {
+            prev_dir: None,
+            sys: System::new_with_specifics(RefreshKind::nothing()),
+            history_path,
+        }
+    }
+
+    fn execute_builtins(&mut self, cmd: &CommandExecution) -> bool {
+        if cmd.args.is_empty() {
+            return false;
+        }
+        
+        let command = cmd.args[0].as_str();
+        
+        match command {
+            "cd" => {
+                let target = if cmd.args.len() < 2 {
+                    dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"))
+                } else if cmd.args[1] == "-" {
+                    if let Some(prev) = &self.prev_dir {
+                        prev.clone()
+                    } else {
+                        eprintln!("cd: oldpwd not set");
+                        return true;
+                    }
+                } else {
+                    PathBuf::from(&cmd.args[1])
+                };
+                
+                let current = env::current_dir().unwrap_or_default();
+                match env::set_current_dir(&target) {
+                    Ok(_) => {
+                        self.prev_dir = Some(current);
+                    }
+                    Err(e) => eprintln!("cd: {}: {}", target.display(), e),
+                }
+                true
+            }
+            "pwd" => {
+                let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
+                    Ok(w) => w,
+                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                };
+                match env::current_dir() {
+                    Ok(dir) => writeln!(writer, "{}", dir.display()).unwrap_or(()),
+                    Err(e) => eprintln!("pwd: {}", e),
+                }
+                true
+            }
+            "sys" => {
+                self.sys.refresh_specifics(
+                    RefreshKind::nothing()
+                        .with_cpu(CpuRefreshKind::everything())
+                        .with_memory(MemoryRefreshKind::everything())
+                );
+                
+                let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
+                    Ok(w) => w,
+                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                };
+                
+                writeln!(writer, "\x1b[1;36m--- System Status ---\x1b[0m").unwrap_or(());
+                writeln!(writer, "{:<15} {}", "OS:", System::name().unwrap_or_else(|| "Unknown".into())).unwrap_or(());
+                writeln!(writer, "{:<15} {}", "Kernel:", System::kernel_version().unwrap_or_else(|| "Unknown".into())).unwrap_or(());
+                writeln!(writer, "{:<15} {}", "Hostname:", System::host_name().unwrap_or_else(|| "Unknown".into())).unwrap_or(());
+                writeln!(writer, "{:<15} {}", "Uptime:", format_duration(System::uptime())).unwrap_or(());
+                
+                let total_mem = self.sys.total_memory() / 1024 / 1024;
+                let used_mem = self.sys.used_memory() / 1024 / 1024;
+                let mem_pct = (used_mem as f64 / total_mem as f64 * 100.0) as usize;
+                
+                let bar_len = 20;
+                let filled = (mem_pct * bar_len) / 100;
+                let bar = format!("[{}{}]", "#".repeat(filled), ".".repeat(bar_len - filled));
+                
+                writeln!(writer, "{:<15} {} {}% ({}MB / {}MB)", "Memory:", bar, mem_pct, used_mem, total_mem).unwrap_or(());
+                writeln!(writer, "{:<15} {:.2}%", "CPU Load:", self.sys.global_cpu_usage()).unwrap_or(());
+
+                // Disk Info
+                let disks = Disks::new_with_refreshed_list();
+                if let Some(root) = disks.iter().find(|d| d.mount_point() == std::path::Path::new("/")) {
+                    let total = root.total_space() / 1024 / 1024 / 1024;
+                    let avail = root.available_space() / 1024 / 1024 / 1024;
+                    let used = total - avail;
+                    let disk_pct = (used as f64 / total as f64 * 100.0) as usize;
+                    let filled_disk = (disk_pct * bar_len) / 100;
+                    let bar_disk = format!("[{}{}]", "#".repeat(filled_disk), ".".repeat(bar_len - filled_disk));
+                    writeln!(writer, "{:<15} {} {}% ({}GB / {}GB)", "Disk (/):", bar_disk, disk_pct, used, total).unwrap_or(());
+                }
+                
+                true
+            }
+            "top" => {
+                self.sys.refresh_specifics(
+                    RefreshKind::nothing().with_processes(ProcessRefreshKind::everything())
+                );
+                
+                let mut processes: Vec<_> = self.sys.processes().values().collect();
+                processes.sort_by(|a, b| b.cpu_usage().partial_cmp(&a.cpu_usage()).unwrap());
+                
+                let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
+                    Ok(w) => w,
+                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                };
+                
+                writeln!(writer, "\x1b[1;33m{:<8} {:<15} {:<10} {:<10}\x1b[0m", "PID", "Name", "CPU %", "Mem MB").unwrap_or(());
+                for p in processes.iter().take(10) {
+                    writeln!(writer, "{:<8} {:<15} {:<10.2} {:<10}", 
+                        p.pid(), 
+                        p.name().to_string_lossy(), 
+                        p.cpu_usage(), 
+                        p.memory() / 1024 / 1024
+                    ).unwrap_or(());
+                }
+                true
+            }
+            "help" => {
+                let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
+                    Ok(w) => w,
+                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                };
+                writeln!(writer, "\x1b[1;32mShyell - Advanced Performance Shell\x1b[0m").unwrap_or(());
+                writeln!(writer, "\x1b[1mSystem Performance:\x1b[0m").unwrap_or(());
+                writeln!(writer, "  sys         Show system overview (CPU, Mem, Disk, Uptime).").unwrap_or(());
+                writeln!(writer, "  top         Show top 10 processes by CPU usage.").unwrap_or(());
+                writeln!(writer, "  bench <cmd> Prefix any command to measure its time/resources.").unwrap_or(());
+                writeln!(writer, "\x1b[1mStandard Commands:\x1b[0m").unwrap_or(());
+                writeln!(writer, "  cd [dir]    Change directory ('cd -' for back).").unwrap_or(());
+                writeln!(writer, "  pwd         Print current directory.").unwrap_or(());
+                writeln!(writer, "  echo        Print arguments.").unwrap_or(());
+                writeln!(writer, "  exit        Exit the shell.").unwrap_or(());
+                true
+            }
+            "echo" => {
+                let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
+                    Ok(w) => w,
+                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                };
+                let output = cmd.args[1..].join(" ");
+                writeln!(writer, "{}", output).unwrap_or(());
+                true
+            }
+            "exit" => {
+                std::process::exit(0);
+            }
+            _ => false,
+        }
+    }
+}
 
 struct CommandExecution {
     args: Vec<String>,
@@ -35,14 +197,27 @@ fn expand_word(word: &str) -> String {
     while let Some(c) = chars.next() {
         if c == '$' {
             let mut var = String::new();
-            while let Some(&nc) = chars.peek() {
-                if nc.is_alphanumeric() || nc == '_' {
+            if let Some(&'{') = chars.peek() {
+                chars.next(); // consume '{'
+                while let Some(&nc) = chars.peek() {
+                    if nc == '}' {
+                        chars.next(); // consume '}'
+                        break;
+                    }
                     var.push(nc);
                     chars.next();
-                } else {
-                    break;
+                }
+            } else {
+                while let Some(&nc) = chars.peek() {
+                    if nc.is_alphanumeric() || nc == '_' {
+                        var.push(nc);
+                        chars.next();
+                    } else {
+                        break;
+                    }
                 }
             }
+            
             if !var.is_empty() {
                 if let Ok(val) = env::var(&var) {
                     result.push_str(&val);
@@ -145,138 +320,7 @@ fn format_duration(seconds: u64) -> String {
     }
 }
 
-fn execute_builtins(cmd: &CommandExecution, prev_dir: &mut Option<PathBuf>) -> bool {
-    if cmd.args.is_empty() {
-        return false;
-    }
-    
-    let command = cmd.args[0].as_str();
-    
-    match command {
-        "cd" => {
-            let target = if cmd.args.len() < 2 {
-                dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"))
-            } else if cmd.args[1] == "-" {
-                if let Some(prev) = prev_dir {
-                    prev.clone()
-                } else {
-                    eprintln!("cd: oldpwd not set");
-                    return true;
-                }
-            } else {
-                PathBuf::from(&cmd.args[1])
-            };
-            
-            let current = env::current_dir().unwrap_or_default();
-            match env::set_current_dir(&target) {
-                Ok(_) => {
-                    *prev_dir = Some(current);
-                }
-                Err(e) => eprintln!("cd: {}: {}", target.display(), e),
-            }
-            true
-        }
-        "pwd" => {
-            let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
-                Ok(w) => w,
-                Err(e) => { eprintln!("shyell: {}", e); return true; }
-            };
-            match env::current_dir() {
-                Ok(dir) => writeln!(writer, "{}", dir.display()).unwrap_or(()),
-                Err(e) => eprintln!("pwd: {}", e),
-            }
-            true
-        }
-        "sys" => {
-            let mut sys = System::new_with_specifics(
-                RefreshKind::nothing()
-                    .with_cpu(CpuRefreshKind::everything())
-                    .with_memory(MemoryRefreshKind::everything())
-            );
-            sys.refresh_all();
-            
-            let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
-                Ok(w) => w,
-                Err(e) => { eprintln!("shyell: {}", e); return true; }
-            };
-            
-            writeln!(writer, "\x1b[1;36m--- System Status ---\x1b[0m").unwrap_or(());
-            writeln!(writer, "{:<15} {}", "OS:", System::name().unwrap_or_else(|| "Unknown".into())).unwrap_or(());
-            writeln!(writer, "{:<15} {}", "Kernel:", System::kernel_version().unwrap_or_else(|| "Unknown".into())).unwrap_or(());
-            writeln!(writer, "{:<15} {}", "Hostname:", System::host_name().unwrap_or_else(|| "Unknown".into())).unwrap_or(());
-            writeln!(writer, "{:<15} {}", "Uptime:", format_duration(System::uptime())).unwrap_or(());
-            
-            let total_mem = sys.total_memory() / 1024 / 1024;
-            let used_mem = sys.used_memory() / 1024 / 1024;
-            let mem_pct = (used_mem as f64 / total_mem as f64 * 100.0) as usize;
-            
-            let bar_len = 20;
-            let filled = (mem_pct * bar_len) / 100;
-            let bar = format!("[{}{}]", "#".repeat(filled), ".".repeat(bar_len - filled));
-            
-            writeln!(writer, "{:<15} {} {}% ({}MB / {}MB)", "Memory:", bar, mem_pct, used_mem, total_mem).unwrap_or(());
-            writeln!(writer, "{:<15} {:.2}%", "CPU Load:", sys.global_cpu_usage()).unwrap_or(());
-            true
-        }
-        "top" => {
-            let mut sys = System::new_with_specifics(
-                RefreshKind::nothing().with_processes(ProcessRefreshKind::everything())
-            );
-            sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
-            
-            let mut processes: Vec<_> = sys.processes().values().collect();
-            processes.sort_by(|a, b| b.cpu_usage().partial_cmp(&a.cpu_usage()).unwrap());
-            
-            let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
-                Ok(w) => w,
-                Err(e) => { eprintln!("shyell: {}", e); return true; }
-            };
-            
-            writeln!(writer, "\x1b[1;33m{:<8} {:<15} {:<10} {:<10}\x1b[0m", "PID", "Name", "CPU %", "Mem MB").unwrap_or(());
-            for p in processes.iter().take(10) {
-                writeln!(writer, "{:<8} {:<15} {:<10.2} {:<10}", 
-                    p.pid(), 
-                    p.name().to_string_lossy(), 
-                    p.cpu_usage(), 
-                    p.memory() / 1024 / 1024
-                ).unwrap_or(());
-            }
-            true
-        }
-        "help" => {
-            let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
-                Ok(w) => w,
-                Err(e) => { eprintln!("shyell: {}", e); return true; }
-            };
-            writeln!(writer, "\x1b[1;32mShyell - Advanced Performance Shell\x1b[0m").unwrap_or(());
-            writeln!(writer, "\x1b[1mSystem Performance:\x1b[0m").unwrap_or(());
-            writeln!(writer, "  sys         Show system overview (CPU, Mem, Uptime).").unwrap_or(());
-            writeln!(writer, "  top         Show top 10 processes by CPU usage.").unwrap_or(());
-            writeln!(writer, "  bench <cmd> Prefix any command to measure its time/resources.").unwrap_or(());
-            writeln!(writer, "\x1b[1mStandard Commands:\x1b[0m").unwrap_or(());
-            writeln!(writer, "  cd [dir]    Change directory ('cd -' for back).").unwrap_or(());
-            writeln!(writer, "  pwd         Print current directory.").unwrap_or(());
-            writeln!(writer, "  echo        Print arguments.").unwrap_or(());
-            writeln!(writer, "  exit        Exit the shell.").unwrap_or(());
-            true
-        }
-        "echo" => {
-            let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
-                Ok(w) => w,
-                Err(e) => { eprintln!("shyell: {}", e); return true; }
-            };
-            let output = cmd.args[1..].join(" ");
-            writeln!(writer, "{}", output).unwrap_or(());
-            true
-        }
-        "exit" => {
-            std::process::exit(0);
-        }
-        _ => false,
-    }
-}
-
-fn execute_commands(cmds: Vec<CommandExecution>, prev_dir: &mut Option<PathBuf>) {
+fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
     if cmds.is_empty() {
         return;
     }
@@ -284,14 +328,15 @@ fn execute_commands(cmds: Vec<CommandExecution>, prev_dir: &mut Option<PathBuf>)
     let is_bench = cmds[0].bench;
     let start_time = if is_bench { Some(Instant::now()) } else { None };
 
-    if cmds.len() == 1 && execute_builtins(&cmds[0], prev_dir) {
+    if cmds.len() == 1 && state.execute_builtins(&cmds[0]) {
         if let Some(start) = start_time {
             println!("\x1b[1;35mBench: Built-in command took {:?}\x1b[0m", start.elapsed());
         }
         return;
     }
 
-    let mut previous_command: Option<Child> = None;
+    let mut children = Vec::new();
+    let mut previous_stdout: Option<Stdio> = None;
     let cmd_count = cmds.len();
 
     for (i, cmd_exec) in cmds.iter().enumerate() {
@@ -308,8 +353,8 @@ fn execute_commands(cmds: Vec<CommandExecution>, prev_dir: &mut Option<PathBuf>)
                     return;
                 }
             }
-        } else if let Some(mut prev) = previous_command.take() {
-            Stdio::from(prev.stdout.take().unwrap())
+        } else if let Some(prev) = previous_stdout.take() {
+            prev
         } else {
             Stdio::inherit()
         };
@@ -342,25 +387,34 @@ fn execute_commands(cmds: Vec<CommandExecution>, prev_dir: &mut Option<PathBuf>)
         cmd.stdout(stdout);
 
         match cmd.spawn() {
-            Ok(child) => {
-                previous_command = Some(child);
+            Ok(mut child) => {
+                if i < cmd_count - 1 {
+                    previous_stdout = Some(Stdio::from(child.stdout.take().unwrap()));
+                }
+                children.push((command.clone(), child));
             }
             Err(e) => {
                 eprintln!("shyell: {}: {}", command, e);
-                return;
+                // Even if one fails, we should wait for the already spawned ones
+                break;
             }
         }
     }
 
-    if let Some(mut final_child) = previous_command {
-        let status = final_child.wait();
-        if let Some(start) = start_time {
-            let elapsed = start.elapsed();
-            println!("\x1b[1;35m--- Benchmark Results ---\x1b[0m");
-            println!("{:<15} {:?}", "Execution Time:", elapsed);
-            if let Ok(s) = status {
-                println!("{:<15} {}", "Exit Status:", s);
-            }
+    let mut last_status = None;
+    for (name, mut child) in children {
+        match child.wait() {
+            Ok(s) => last_status = Some(s),
+            Err(e) => eprintln!("shyell: error waiting for {}: {}", name, e),
+        }
+    }
+
+    if let Some(start) = start_time {
+        let elapsed = start.elapsed();
+        println!("\x1b[1;35m--- Benchmark Results ---\x1b[0m");
+        println!("{:<15} {:?}", "Execution Time:", elapsed);
+        if let Some(s) = last_status {
+            println!("{:<15} {}", "Exit Status:", s);
         }
     }
 }
@@ -380,14 +434,10 @@ fn get_prompt() -> String {
 }
 
 fn main() {
-    let mut prev_dir: Option<PathBuf> = None;
+    let mut state = ShellState::new();
     let mut rl = DefaultEditor::new().unwrap();
 
-    let history_path = dirs::home_dir()
-        .map(|mut p| { p.push(".shyell_history"); p })
-        .unwrap_or_else(|| PathBuf::from(".shyell_history"));
-        
-    let _ = rl.load_history(&history_path);
+    let _ = rl.load_history(&state.history_path);
 
     loop {
         let readline = rl.readline(&get_prompt());
@@ -402,7 +452,7 @@ fn main() {
                 match shell_words::split(line) {
                     Ok(words) => {
                         let cmds = parse_commands(words);
-                        execute_commands(cmds, &mut prev_dir);
+                        execute_commands(cmds, &mut state);
                     }
                     Err(e) => eprintln!("Parse error: {}", e),
                 }
@@ -418,5 +468,5 @@ fn main() {
             }
         }
     }
-    let _ = rl.save_history(&history_path);
+    let _ = rl.save_history(&state.history_path);
 }
