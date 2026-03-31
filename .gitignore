@@ -1,5 +1,5 @@
 /target
 Cargo.lock
 **/*.rs.bk
-.shyell_history
-.shyell_benchmarks.json
+.vantage_history
+.vantage_benchmarks.json

@@ -1,10 +1,10 @@
-# 🐚 Shyell - The Observed Environment Shell
+# 🐚 Vantage - The Observed Environment Shell
 
-Shyell is a performance-focused shell written in Rust, designed to be more than just a command runner. It acts as an **Observed Environment**, providing real-time system health, historical performance insights, and proactive guardrails.
+Vantage is a performance-focused shell written in Rust, designed to be more than just a command runner. It acts as an **Observed Environment**, providing real-time system health, historical performance insights, and proactive guardrails.
 
 ## 🚀 The "Observed Environment" Philosophy
 
-Unlike traditional shells that are passive, Shyell is active. It monitors your system resources *while* you work and provides context that helps you make better decisions.
+Unlike traditional shells that are passive, Vantage is active. It monitors your system resources *while* you work and provides context that helps you make better decisions.
 
 ### Key Differentiators:
 - **Active Dashboard Prompt**: Real-time CPU and Memory status integrated directly into your prompt.
@@ -35,7 +35,7 @@ Unlike traditional shells that are passive, Shyell is active. It monitors your s
 
 ```bash
 cargo build --release
-./target/release/Shyell
+./target/release/Vantage
 ```
 
 ## ⌨️ Built-in Commands
@@ -59,7 +59,7 @@ Measure exactly how long a build or script takes:
 ```bash
 bench cargo build --release
 ```
-*Shyell will automatically record this and alert you if future runs are significantly slower.*
+*Vantage will automatically record this and alert you if future runs are significantly slower.*
 
 ### 3. Advanced Pipelines & Redirection
 Combine tools and save output just like in Bash:

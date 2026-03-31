@@ -15,7 +15,7 @@ use crate::state::ShellState;
 use crate::parser::parse_commands;
 use crate::executor::execute_commands;
 use crate::monitor::Monitor;
-use crate::completion::ShyellHelper;
+use crate::completion::VantageHelper;
 
 fn get_prompt(state: &mut ShellState) -> String {
     // Refresh system stats for the prompt
@@ -80,8 +80,8 @@ fn main() {
         .completion_type(rustyline::CompletionType::List)
         .build();
     
-    let mut rl: Editor<ShyellHelper, _> = Editor::with_config(config).unwrap();
-    rl.set_helper(Some(ShyellHelper::new()));
+    let mut rl: Editor<VantageHelper, _> = Editor::with_config(config).unwrap();
+    rl.set_helper(Some(VantageHelper::new()));
 
     let _ = rl.load_history(&state.history_path);
 

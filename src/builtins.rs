@@ -41,7 +41,7 @@ impl ShellState {
             "pwd" => {
                 let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
                     Ok(w) => w,
-                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                    Err(e) => { eprintln!("vantage: {}", e); return true; }
                 };
                 match env::current_dir() {
                     Ok(dir) => writeln!(writer, "{}", dir.display()).unwrap_or(()),
@@ -58,7 +58,7 @@ impl ShellState {
                 
                 let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
                     Ok(w) => w,
-                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                    Err(e) => { eprintln!("vantage: {}", e); return true; }
                 };
                 
                 writeln!(writer, "\x1b[1;36m--- System Status ---\x1b[0m").unwrap_or(());
@@ -101,7 +101,7 @@ impl ShellState {
                 
                 let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
                     Ok(w) => w,
-                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                    Err(e) => { eprintln!("vantage: {}", e); return true; }
                 };
                 
                 writeln!(writer, "\x1b[1;33m{:<8} {:<15} {:<10} {:<10}\x1b[0m", "PID", "Name", "CPU %", "Mem MB").unwrap_or(());
@@ -118,7 +118,7 @@ impl ShellState {
             "history" => {
                 let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
                     Ok(w) => w,
-                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                    Err(e) => { eprintln!("vantage: {}", e); return true; }
                 };
                 writeln!(writer, "\x1b[1;35m--- Performance History ---\x1b[0m").unwrap_or(());
                 for r in self.bench_results.iter().rev().take(20) {
@@ -134,9 +134,9 @@ impl ShellState {
             "help" => {
                 let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
                     Ok(w) => w,
-                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                    Err(e) => { eprintln!("vantage: {}", e); return true; }
                 };
-                writeln!(writer, "\x1b[1;32mShyell - Advanced Performance Shell\x1b[0m").unwrap_or(());
+                writeln!(writer, "\x1b[1;32mVantage - Advanced Performance Shell\x1b[0m").unwrap_or(());
                 writeln!(writer, "\x1b[1mSystem Performance:\x1b[0m").unwrap_or(());
                 writeln!(writer, "  sys         Show system overview (CPU, Mem, Disk, Uptime).").unwrap_or(());
                 writeln!(writer, "  top         Show top 10 processes by CPU usage.").unwrap_or(());
@@ -152,7 +152,7 @@ impl ShellState {
             "echo" => {
                 let mut writer = match get_output_writer(&cmd.output_file, cmd.append) {
                     Ok(w) => w,
-                    Err(e) => { eprintln!("shyell: {}", e); return true; }
+                    Err(e) => { eprintln!("vantage: {}", e); return true; }
                 };
                 let output = cmd.args[1..].join(" ");
                 writeln!(writer, "{}", output).unwrap_or(());

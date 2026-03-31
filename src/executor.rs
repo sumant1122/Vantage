@@ -69,7 +69,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
 
     for (i, cmd_exec) in cmds.iter().enumerate() {
         if cmd_exec.args.is_empty() {
-            eprintln!("shyell: parse error: empty command in pipeline");
+            eprintln!("vantage: parse error: empty command in pipeline");
             state.last_exit_status = Some(1);
             return;
         }
@@ -78,7 +78,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
             match File::open(in_file) {
                 Ok(f) => Stdio::from(f),
                 Err(e) => {
-                    eprintln!("shyell: {}: {}", in_file, e);
+                    eprintln!("vantage: {}: {}", in_file, e);
                     state.last_exit_status = Some(1);
                     return;
                 }
@@ -98,7 +98,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
             match f {
                 Ok(f) => Stdio::from(f),
                 Err(e) => {
-                    eprintln!("shyell: {}: {}", out_file, e);
+                    eprintln!("vantage: {}: {}", out_file, e);
                     state.last_exit_status = Some(1);
                     return;
                 }
@@ -125,7 +125,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
                 children.push((command.clone(), child));
             }
             Err(e) => {
-                eprintln!("shyell: {}: {}", command, e);
+                eprintln!("vantage: {}: {}", command, e);
                 state.last_exit_status = Some(1);
                 break;
             }
@@ -136,7 +136,7 @@ pub fn execute_commands(cmds: Vec<CommandExecution>, state: &mut ShellState) {
     for (name, mut child) in children {
         match child.wait() {
             Ok(s) => last_status = Some(s),
-            Err(e) => eprintln!("shyell: error waiting for {}: {}", name, e),
+            Err(e) => eprintln!("vantage: error waiting for {}: {}", name, e),
         }
     }
 

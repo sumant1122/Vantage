@@ -24,8 +24,8 @@ pub struct ShellState {
 impl ShellState {
     pub fn new() -> Self {
         let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        let history_path = home.join(".shyell_history");
-        let bench_history_path = home.join(".shyell_benchmarks.json");
+        let history_path = home.join(".vantage_history");
+        let bench_history_path = home.join(".vantage_benchmarks.json");
 
         let bench_results = if let Ok(content) = fs::read_to_string(&bench_history_path) {
             serde_json::from_str(&content).unwrap_or_default()

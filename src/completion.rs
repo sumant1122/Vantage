@@ -8,12 +8,12 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
-pub struct ShyellHelper {
+pub struct VantageHelper {
     pub filename_completer: FilenameCompleter,
     pub builtins: Vec<String>,
 }
 
-impl ShyellHelper {
+impl VantageHelper {
     pub fn new() -> Self {
         Self {
             filename_completer: FilenameCompleter::new(),
@@ -58,7 +58,7 @@ impl ShyellHelper {
     }
 }
 
-impl Completer for ShyellHelper {
+impl Completer for VantageHelper {
     type Candidate = Pair;
 
     fn complete(
@@ -105,9 +105,9 @@ impl Completer for ShyellHelper {
     }
 }
 
-impl Helper for ShyellHelper {}
-impl Hinter for ShyellHelper {
+impl Helper for VantageHelper {}
+impl Hinter for VantageHelper {
     type Hint = String;
 }
-impl Highlighter for ShyellHelper {}
-impl Validator for ShyellHelper {}
+impl Highlighter for VantageHelper {}
+impl Validator for VantageHelper {}
