@@ -63,10 +63,10 @@ impl ShellState {
 
 pub fn expand_word(word: &str) -> String {
     let mut expanded = String::new();
-    if word.starts_with('~') {
+    if let Some(rest) = word.strip_prefix('~') {
         if let Some(home) = dirs::home_dir() {
             expanded.push_str(&home.to_string_lossy());
-            expanded.push_str(&word[1..]);
+            expanded.push_str(rest);
         } else {
             expanded.push_str(word);
         }
@@ -112,4 +112,41 @@ pub fn expand_word(word: &str) -> String {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_expand_word_no_expansion() {
+        assert_eq!(expand_word("hello"), "hello");
+    }
+
+    #[test]
+    fn test_expand_word_tilde() {
+        let home = env::var("HOME").unwrap();
+        assert_eq!(expand_word("~/test"), format!("{}/test", home));
+    }
+
+    #[test]
+    fn test_expand_word_env_var() {
+        unsafe { env::set_var("TEST_VAR", "value"); }
+        assert_eq!(expand_word("$TEST_VAR"), "value");
+        assert_eq!(expand_word("${TEST_VAR}"), "value");
+        assert_eq!(expand_word("prefix_$TEST_VAR"), "prefix_value");
+    }
+
+    #[test]
+    fn test_expand_word_mixed() {
+        unsafe { env::set_var("FOO", "bar"); }
+        let home = env::var("HOME").unwrap();
+        assert_eq!(expand_word("~/$FOO"), format!("{}/bar", home));
+    }
+
+    #[test]
+    fn test_expand_word_empty_var() {
+        assert_eq!(expand_word("$NON_EXISTENT_VAR"), "");
+    }
 }

@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use crate::state::{ShellState, BenchmarkResult};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind};
 use walkdir::WalkDir;

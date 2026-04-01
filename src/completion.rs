@@ -6,7 +6,6 @@ use rustyline::validate::Validator;
 use rustyline::{Context, Helper};
 use std::env;
 use std::fs;
-use std::path::Path;
 
 pub struct VantageHelper {
     pub filename_completer: FilenameCompleter,
@@ -30,9 +29,9 @@ impl VantageHelper {
             for path in env::split_paths(&path_var) {
                 if let Ok(entries) = fs::read_dir(path) {
                     for entry in entries.flatten() {
-                        let name = entry.file_name().to_string_lossy().to_string();
-                        if name.starts_with(prefix) {
-                            if let Ok(metadata) = entry.metadata() {
+                        if let Ok(metadata) = entry.metadata() {
+                            let name = entry.file_name().to_string_lossy().to_string();
+                            if name.starts_with(prefix) {
                                 #[cfg(unix)]
                                 {
                                     use std::os::unix::fs::PermissionsExt;
