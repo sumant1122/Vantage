@@ -9,13 +9,13 @@ use std::fs;
 use std::cell::RefCell;
 use std::borrow::Cow;
 
-pub struct VantageHelper {
+pub struct ShyellHelper {
     pub filename_completer: FilenameCompleter,
     pub builtins: Vec<String>,
     pub path_cache: RefCell<Option<(String, Vec<String>)>>,
 }
 
-impl VantageHelper {
+impl ShyellHelper {
     pub fn new() -> Self {
         Self {
             filename_completer: FilenameCompleter::new(),
@@ -73,7 +73,7 @@ impl VantageHelper {
     }
 }
 
-impl Completer for VantageHelper {
+impl Completer for ShyellHelper {
     type Candidate = Pair;
 
     fn complete(
@@ -116,9 +116,9 @@ impl Completer for VantageHelper {
     }
 }
 
-impl Helper for VantageHelper {}
+impl Helper for ShyellHelper {}
 
-impl Hinter for VantageHelper {
+impl Hinter for ShyellHelper {
     type Hint = String;
     
     fn hint(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Option<String> {
@@ -138,7 +138,7 @@ impl Hinter for VantageHelper {
     }
 }
 
-impl Highlighter for VantageHelper {
+impl Highlighter for ShyellHelper {
     fn highlight<'l>(&self, line: &'l str, _pos: usize) -> Cow<'l, str> {
         for builtin in &self.builtins {
             if line.starts_with(builtin) && (line.len() == builtin.len() || line.as_bytes()[builtin.len()].is_ascii_whitespace()) {
@@ -154,4 +154,4 @@ impl Highlighter for VantageHelper {
     }
 }
 
-impl Validator for VantageHelper {}
+impl Validator for ShyellHelper {}

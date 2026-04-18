@@ -1,17 +1,17 @@
-# Contributing to Vantage
+# Contributing to Shyell
 
-Thank you for your interest in contributing to Vantage! We welcome all contributions, from bug reports and feature requests to code changes and documentation improvements.
+Thank you for your interest in contributing to Shyell! We welcome all contributions, from bug reports and feature requests to code changes and documentation improvements.
 
 ## How to Contribute
 
 ### Reporting Bugs
 
-- Search the [GitHub issues](https://github.com/your-username/Vantage/issues) to see if the bug has already been reported.
+- Search the [GitHub issues](https://github.com/your-username/Shyell/issues) to see if the bug has already been reported.
 - If not, create a new issue with a clear title and description, including steps to reproduce the bug and your environment details (OS, Rust version, etc.).
 
 ### Suggesting Features
 
-- Search the [GitHub issues](https://github.com/your-username/Vantage/issues) to see if the feature has already been suggested.
+- Search the [GitHub issues](https://github.com/your-username/Shyell/issues) to see if the feature has already been suggested.
 - If not, create a new issue describing the feature and why it would be useful.
 
 ### Code Contributions
@@ -33,6 +33,6 @@ Thank you for your interest in contributing to Vantage! We welcome all contribut
 
 ## Community
 
-Join our community discussions on [GitHub Discussions](https://github.com/your-username/Vantage/discussions) if you have any questions or want to chat with other contributors.
+Join our community discussions on [GitHub Discussions](https://github.com/your-username/Shyell/discussions) if you have any questions or want to chat with other contributors.
 
-By contributing to Vantage, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+By contributing to Shyell, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -95,7 +95,7 @@ pub fn execute_commands(pipelines: Vec<PipelineExecution>, state: &mut ShellStat
 
             for (i, cmd_exec) in cmds.iter().enumerate() {
                 if cmd_exec.args.is_empty() {
-                    eprintln!("vantage: parse error: empty command in pipeline");
+                    eprintln!("shyell: parse error: empty command in pipeline");
                     state.last_exit_status = Some(1);
                     error_occurred = true;
                     break;
@@ -105,7 +105,7 @@ pub fn execute_commands(pipelines: Vec<PipelineExecution>, state: &mut ShellStat
                     match File::open(in_file) {
                         Ok(f) => Stdio::from(f),
                         Err(e) => {
-                            eprintln!("vantage: {}: {}", in_file, e);
+                            eprintln!("shyell: {}: {}", in_file, e);
                             state.last_exit_status = Some(1);
                             error_occurred = true;
                             break;
@@ -126,7 +126,7 @@ pub fn execute_commands(pipelines: Vec<PipelineExecution>, state: &mut ShellStat
                     match f {
                         Ok(f) => Stdio::from(f),
                         Err(e) => {
-                            eprintln!("vantage: {}: {}", out_file, e);
+                            eprintln!("shyell: {}: {}", out_file, e);
                             state.last_exit_status = Some(1);
                             error_occurred = true;
                             break;
@@ -154,7 +154,7 @@ pub fn execute_commands(pipelines: Vec<PipelineExecution>, state: &mut ShellStat
                         children.push((command.clone(), child));
                     }
                     Err(e) => {
-                        eprintln!("vantage: {}: {}", command, e);
+                        eprintln!("shyell: {}: {}", command, e);
                         state.last_exit_status = Some(1);
                         error_occurred = true;
                         break;
@@ -167,7 +167,7 @@ pub fn execute_commands(pipelines: Vec<PipelineExecution>, state: &mut ShellStat
                 for (name, mut child) in children {
                     match child.wait() {
                         Ok(s) => last_status = Some(s),
-                        Err(e) => eprintln!("vantage: error waiting for {}: {}", name, e),
+                        Err(e) => eprintln!("shyell: error waiting for {}: {}", name, e),
                     }
                 }
                 state.last_exit_status = last_status.and_then(|s| s.code()).or(Some(0));

@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🐚 Vantage 
+# 🐚 Shyell
 
 **The Performance-Focused, Environment-Aware Shell**
 
@@ -9,7 +9,7 @@
 
 <br>
 
-Vantage is a modern shell written natively in Rust, designed for developers who care about system health and workflow performance. It proactively monitors system load and benchmarks your commands in real-time.
+Shyell is a modern shell written natively in Rust, designed for developers who care about system health and workflow performance. It proactively monitors system load and benchmarks your commands in real-time.
 
 </div>
 
@@ -21,8 +21,8 @@ Vantage is a modern shell written natively in Rust, designed for developers who 
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/Vantage.git
-cd Vantage
+git clone https://github.com/your-username/Shyell.git
+cd Shyell
 
 # Build and run
 cargo run --release

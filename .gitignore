@@ -14,6 +14,6 @@
 *.swp
 *.swo
 
-# Vantage legacy history files (since we moved to XDG paths)
-.vantage_history
-.vantage_benchmarks.json
+# Shyell legacy history files
+.shyell_history
+.shyell_benchmarks.json

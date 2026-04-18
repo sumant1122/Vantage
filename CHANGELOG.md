@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- Initial release of Vantage shell.
+- Initial release of Shyell shell.
 - Project-aware context in the prompt.
 - System health check commands (`sys`, `top`).
 - Basic historical benchmarking.

@@ -26,13 +26,13 @@ pub struct ShellState {
 impl ShellState {
     pub fn new() -> Self {
         let data_dir = dirs::data_local_dir().unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from(".")));
-        let vantage_dir = data_dir.join("vantage");
-        if !vantage_dir.exists() {
-            let _ = std::fs::create_dir_all(&vantage_dir);
+        let shyell_dir = data_dir.join("shyell");
+        if !shyell_dir.exists() {
+            let _ = std::fs::create_dir_all(&shyell_dir);
         }
-        let history_path = vantage_dir.join("history");
-        let bench_history_path = vantage_dir.join("benchmarks.json");
-        let aliases_path = vantage_dir.join("aliases.json");
+        let history_path = shyell_dir.join("history");
+        let bench_history_path = shyell_dir.join("benchmarks.json");
+        let aliases_path = shyell_dir.join("aliases.json");
 
         let bench_results = if let Ok(content) = fs::read_to_string(&bench_history_path) {
             serde_json::from_str(&content).unwrap_or_default()
