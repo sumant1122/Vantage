@@ -41,10 +41,7 @@ pub fn tokenize(line: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        if chars[i] == '&'
-            && i + 1 < chars.len()
-            && chars[i + 1] == '&'
-        {
+        if chars[i] == '&' && i + 1 < chars.len() && chars[i + 1] == '&' {
             tokens.push(Token::Operator("&&".to_string()));
             i += 2;
             continue;
@@ -171,7 +168,9 @@ pub fn parse_commands(
     let mut expanded_tokens = Vec::new();
     let mut is_first = true;
     for token in tokens {
-        if let Token::Word(ref w) = token && is_first {
+        if let Token::Word(ref w) = token
+            && is_first
+        {
             if w == "bench" {
                 expanded_tokens.push(token.clone());
                 continue;
@@ -212,7 +211,9 @@ pub fn parse_commands(
 
     while let Some(tok) = iter.next() {
         if expecting_new_command {
-            if let Token::Word(w) = &tok && w == "bench" {
+            if let Token::Word(w) = &tok
+                && w == "bench"
+            {
                 current_cmd.bench = true;
                 continue;
             }
