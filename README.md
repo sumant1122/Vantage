@@ -6,7 +6,6 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange.svg)
-![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)
 
 <br>
 
