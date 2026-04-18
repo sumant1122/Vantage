@@ -41,10 +41,10 @@ impl ShyellHelper {
         let current_path = env::var("PATH").unwrap_or_default();
         let mut update_needed = true;
 
-        if let Some((cached_path, _)) = &*self.path_cache.borrow() {
-            if current_path == *cached_path {
-                update_needed = false;
-            }
+        if let Some((cached_path, _)) = &*self.path_cache.borrow()
+            && current_path == *cached_path
+        {
+            update_needed = false;
         }
 
         if update_needed {

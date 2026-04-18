@@ -41,12 +41,13 @@ pub fn tokenize(line: &str) -> Result<Vec<Token>, String> {
             continue;
         }
 
-        if chars[i] == '&' {
-            if i + 1 < chars.len() && chars[i + 1] == '&' {
-                tokens.push(Token::Operator("&&".to_string()));
-                i += 2;
-                continue;
-            }
+        if chars[i] == '&'
+            && i + 1 < chars.len()
+            && chars[i + 1] == '&'
+        {
+            tokens.push(Token::Operator("&&".to_string()));
+            i += 2;
+            continue;
         }
         if chars[i] == '|' {
             if i + 1 < chars.len() && chars[i + 1] == '|' {
@@ -88,22 +89,19 @@ pub fn tokenize(line: &str) -> Result<Vec<Token>, String> {
         // Unquoted tilde expansion at start of word
         if chars[i] == '~'
             && (i + 1 == chars.len() || chars[i + 1].is_whitespace() || chars[i + 1] == '/')
+            && let Some(home) = dirs::home_dir()
         {
-            if let Some(home) = dirs::home_dir() {
-                current_word.push_str(&home.to_string_lossy());
-                i += 1;
-            }
+            current_word.push_str(&home.to_string_lossy());
+            i += 1;
         }
 
         while i < chars.len() {
             let c = chars[i];
 
-            if c == '\\' && !in_single {
-                if i + 1 < chars.len() {
-                    current_word.push(chars[i + 1]);
-                    i += 2;
-                    continue;
-                }
+            if c == '\\' && !in_single && i + 1 < chars.len() {
+                current_word.push(chars[i + 1]);
+                i += 2;
+                continue;
             }
 
             if c == '\'' && !in_double {
@@ -118,10 +116,11 @@ pub fn tokenize(line: &str) -> Result<Vec<Token>, String> {
                 continue;
             }
 
-            if !in_single && !in_double {
-                if c.is_whitespace() || c == '|' || c == '<' || c == '>' || c == '&' || c == ';' {
-                    break;
-                }
+            if !in_single
+                && !in_double
+                && (c.is_whitespace() || c == '|' || c == '<' || c == '>' || c == '&' || c == ';')
+            {
+                break;
             }
 
             if c == '$' && !in_single {
@@ -172,18 +171,16 @@ pub fn parse_commands(
     let mut expanded_tokens = Vec::new();
     let mut is_first = true;
     for token in tokens {
-        if let Token::Word(ref w) = token {
-            if is_first {
-                if w == "bench" {
-                    expanded_tokens.push(token.clone());
-                    continue;
-                } else if let Some(alias_val) = aliases.get(w) {
-                    if let Ok(alias_tokens) = tokenize(alias_val) {
-                        expanded_tokens.extend(alias_tokens);
-                        is_first = false;
-                        continue;
-                    }
-                }
+        if let Token::Word(ref w) = token && is_first {
+            if w == "bench" {
+                expanded_tokens.push(token.clone());
+                continue;
+            } else if let Some(alias_val) = aliases.get(w)
+                && let Ok(alias_tokens) = tokenize(alias_val)
+            {
+                expanded_tokens.extend(alias_tokens);
+                is_first = false;
+                continue;
             }
         }
 
@@ -215,11 +212,9 @@ pub fn parse_commands(
 
     while let Some(tok) = iter.next() {
         if expecting_new_command {
-            if let Token::Word(w) = &tok {
-                if w == "bench" {
-                    current_cmd.bench = true;
-                    continue;
-                }
+            if let Token::Word(w) = &tok && w == "bench" {
+                current_cmd.bench = true;
+                continue;
             }
             expecting_new_command = false;
         }
