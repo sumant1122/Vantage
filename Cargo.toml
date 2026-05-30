@@ -15,4 +15,4 @@ walkdir = "2.5.0"
 ctrlc = "3.5.2"
 
 [dev-dependencies]
-serial_test = "3.2.0"
+serial_test = "3.5.0"
